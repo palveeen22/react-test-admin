@@ -23,7 +23,8 @@ const Button = styled.button<{ $hidden?: boolean }>`
   visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 
   &:hover {
-    background: #fcc8c8;
+    background: #FED7D7;
+    color: #9B2C2C;
   }
 
   &:disabled {

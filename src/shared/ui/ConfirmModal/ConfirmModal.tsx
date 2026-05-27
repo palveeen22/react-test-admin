@@ -92,7 +92,7 @@ const ConfirmBtn = styled(BtnBase)`
   color: #c53030;
 
   &:hover {
-    background: #fcc8c8;
+    background: #FED7D7;
   }
 `;
 

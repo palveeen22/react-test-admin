@@ -26,7 +26,7 @@ const EmptyWrapper = styled.div`
   justify-content: center;
   height: 100%;
   gap: 8px;
-  color: #697180;
+  color: #1D2432;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
 `;
