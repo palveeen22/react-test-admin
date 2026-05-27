@@ -10,6 +10,7 @@ const ScrollWrapper = styled.div`
   overflow-x: auto;
   overflow-y: auto;
   min-height: 0;
+  border-bottom: 1px solid #e0e5eb;
 `;
 
 const Table = styled.table`
@@ -46,7 +47,7 @@ export const MetersTable = observer(function MetersTable() {
     <ScrollWrapper>
       <Table>
         <MetersTableHeader />
-        <tbody>
+        <tbody data-full={meters.items.length === 20 ? true : undefined}>
           {meters.isLoading ? (
             <SkeletonRows />
           ) : meters.items.length === 0 ? (

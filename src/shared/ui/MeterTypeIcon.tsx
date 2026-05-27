@@ -22,7 +22,7 @@ const Wrapper = styled.span`
   font-weight: 400;
   font-size: 14px;
   line-height: 20px;
-  color: #1f2939;
+  color: #1d2432;
 `;
 
 export function MeterTypeIcon({ types }: Props) {

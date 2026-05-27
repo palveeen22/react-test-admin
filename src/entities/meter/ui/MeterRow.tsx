@@ -20,12 +20,11 @@ const Row = styled.tr`
   cursor: pointer;
   transition: background 0.1s;
 
-
   &:hover {
     background: #f7f8f9;
   }
 
-  &:last-child {
+  tbody[data-full] &:last-child {
     border-bottom: none;
   }
 

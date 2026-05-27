@@ -15,7 +15,6 @@ const Wrapper = styled.div`
   padding: 8px 16px;
   min-height: 48px;
   background: #ffffff;
-  border-top: 1px solid #eef0f4;
   border-radius: 0 0 8px 8px;
   flex-shrink: 0;
   overflow-x: auto;

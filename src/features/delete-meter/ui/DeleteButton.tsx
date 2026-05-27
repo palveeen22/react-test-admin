@@ -28,7 +28,8 @@ const Button = styled.button<{ $hidden?: boolean }>`
   }
 
   &:disabled {
-    opacity: 0.5;
+    background: #f2f5f8;
+    color: #9da6b4;
     cursor: not-allowed;
   }
 `;
