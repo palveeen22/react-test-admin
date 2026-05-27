@@ -1,74 +1,56 @@
-# React + TypeScript + Vite
+# Список счётчиков воды
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + MobX State Tree приложение для отображения списка счётчиков горячей и холодной воды.
 
-Currently, two official plugins are available:
+## Стек технологий
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Технология | Версия | Назначение |
+|---|---|---|
+| React | 19 | UI-рендеринг |
+| TypeScript | 6 | Типобезопасность |
+| MobX State Tree | 7 | Управление состоянием |
+| styled-components | 6 | Стилизация компонентов |
+| Vite | 8 | Сборка проекта |
 
-## React Compiler
+## Запуск
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+pnpm install
 
-## Expanding the ESLint configuration
+# Скопировать переменные окружения
+cp .env.example .env
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Откройте [http://localhost:5173](http://localhost:5173).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Переменные окружения
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-# react-test-admin
+| Переменная | Описание |
+|---|---|
+| `VITE_API_BASE_URL` | Базовый URL API. В dev-режиме используется `/c300/api/v4/test` через Vite-прокси. |
+
+## Функциональность
+
+- Постраничный список счётчиков (20 на странице)
+- Фиксированная шапка, скролл внутри таблицы
+- Shimmer-скелетон при загрузке, пустое состояние при отсутствии данных
+- Параллельная загрузка адресов с кешированием — уже загруженные адреса повторно не запрашиваются
+- При наведении на строку появляется кнопка удаления
+- Модальное окно подтверждения перед удалением
+- Оптимистичное удаление: элемент исчезает мгновенно, страница обновляется без скелетона, при ошибке — откат
+- Номер текущей страницы сохраняется в URL (`?page=N`) — работает при обновлении и по прямой ссылке
+- Отмена предыдущего запроса при быстром переключении страниц (AbortController)
+
+## API
+
+| Метод | URL | Описание |
+|---|---|---|
+| GET | `/meters/?limit=20&offset=N` | Список счётчиков |
+| GET | `/areas/?id__in=id1&id__in=id2` | Адреса по списку ID |
+| DELETE | `/meters/:id/` | Удаление счётчика |
+
+## Архитектура
+
+Подробное описание структуры — в [ARCHITECTURE.md](./ARCHITECTURE.md).
