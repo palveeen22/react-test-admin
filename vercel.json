@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/c300/:path*",
+      "destination": "https://showroom.eis24.me/c300/:path*"
+    }
+  ]
+}
