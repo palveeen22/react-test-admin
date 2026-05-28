@@ -1,15 +1,5 @@
 {
   "rewrites": [
     { "source": "/c300/(.*)", "destination": "https://showroom.eis24.me/c300/$1" }
-  ],
-  "headers": [
-    {
-      "source": "/c300/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS, DELETE" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
-      ]
-    }
   ]
 }
