@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { reaction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import styled from 'styled-components';
 import { useStore } from '../../../app/providers/useStore';
@@ -34,6 +36,14 @@ const EmptyWrapper = styled.div`
 
 export const MetersTable = observer(function MetersTable() {
   const { meters, areas, modal } = useStore();
+
+  useEffect(() => {
+    return reaction(
+      () => meters.items.map((m) => m.area.id),
+      (ids) => areas.fetchAreas(ids),
+      { fireImmediately: true }
+    );
+  }, []);
 
   function handleDeleteRequest(id: string, index: number) {
     modal.open({

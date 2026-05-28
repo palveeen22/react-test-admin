@@ -1,9 +1,8 @@
-import { types, flow, getRoot, applySnapshot, getSnapshot } from 'mobx-state-tree';
+import { types, flow, applySnapshot, getSnapshot } from 'mobx-state-tree';
 import { MeterModel } from './MeterModel';
 import { httpClient } from '../../../shared/api/httpClient';
 import { METERS_PER_PAGE } from '../../../shared/config/constants';
 import type { MetersResponse } from './types';
-import type { IAreasStore } from '../../area';
 
 export const MetersStore = types
   .model('MetersStore', {
@@ -33,9 +32,6 @@ export const MetersStore = types
       );
       self.count = data.count;
       applySnapshot(self.items, data.results);
-      const areaIds = data.results.map((m) => m.area.id);
-      const root = getRoot<{ areas: IAreasStore }>(self);
-      yield root.areas.fetchAreas(areaIds);
     });
 
     const fetchMeters = flow(function* (offset: number) {
