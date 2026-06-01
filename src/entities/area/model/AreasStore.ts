@@ -1,11 +1,12 @@
 import { types, flow } from 'mobx-state-tree';
 import { AreaModel } from './AreaModel';
-import { httpClient } from '../../../shared/api/httpClient';
+import { httpClient, getHttpErrorMessage } from '../../../shared/api/httpClient';
 import type { AreasResponse } from './types';
 
 export const AreasStore = types
   .model('AreasStore', {
     cache: types.map(AreaModel),
+    error: types.maybeNull(types.string),
   })
   .volatile(() => ({
     pendingIds: new Set<string>(),
@@ -19,6 +20,7 @@ export const AreasStore = types
 
       unknown.forEach((id) => self.pendingIds.add(id));
 
+      self.error = null;
       try {
         const data: AreasResponse = yield httpClient.get('/areas/', {
           id__in: unknown,
@@ -26,6 +28,8 @@ export const AreasStore = types
         data.results.forEach((area) => {
           self.cache.set(area.id, area);
         });
+      } catch (e) {
+        self.error = getHttpErrorMessage(e);
       } finally {
         unknown.forEach((id) => self.pendingIds.delete(id));
       }

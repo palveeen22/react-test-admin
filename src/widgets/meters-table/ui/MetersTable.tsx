@@ -34,6 +34,18 @@ const EmptyWrapper = styled.div`
   font-size: 14px;
 `;
 
+const ErrorBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fff3f3;
+  border-bottom: 1px solid #f5c6c6;
+  color: #b91c1c;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+`;
+
 export const MetersTable = observer(function MetersTable() {
   const { meters, areas, modal } = useStore();
 
@@ -55,11 +67,23 @@ export const MetersTable = observer(function MetersTable() {
 
   return (
     <ScrollWrapper>
+      {meters.deleteError && (
+        <ErrorBanner>⚠ {meters.deleteError}</ErrorBanner>
+      )}
       <Table>
         <MetersTableHeader />
         <tbody data-full={meters.items.length === 20 ? true : undefined}>
           {meters.isLoading ? (
             <SkeletonRows />
+          ) : meters.error ? (
+            <tr>
+              <td colSpan={8} style={{ height: '100%' }}>
+                <EmptyWrapper>
+                  <span style={{ fontSize: 32 }}>⚠️</span>
+                  <span>{meters.error}</span>
+                </EmptyWrapper>
+              </td>
+            </tr>
           ) : meters.items.length === 0 ? (
             <tr>
               <td colSpan={8} style={{ height: '100%' }}>

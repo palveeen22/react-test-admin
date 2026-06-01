@@ -1,6 +1,6 @@
 import { types, flow, applySnapshot, getSnapshot } from 'mobx-state-tree';
 import { MeterModel } from './MeterModel';
-import { httpClient } from '../../../shared/api/httpClient';
+import { httpClient, getHttpErrorMessage } from '../../../shared/api/httpClient';
 import { METERS_PER_PAGE } from '../../../shared/config/constants';
 import type { MetersResponse } from './types';
 
@@ -11,6 +11,8 @@ export const MetersStore = types
     offset: types.optional(types.number, 0),
     isLoading: types.optional(types.boolean, true),
     isDeleting: types.optional(types.boolean, false),
+    error: types.maybeNull(types.string),
+    deleteError: types.maybeNull(types.string),
   })
   .volatile(() => ({
     _abortCtrl: null as AbortController | null,
@@ -40,11 +42,13 @@ export const MetersStore = types
       self._abortCtrl = ctrl;
 
       self.isLoading = true;
+      self.error = null;
       self.offset = offset;
       try {
         yield silentRefetch(ctrl.signal);
       } catch (e) {
         if (e instanceof Error && e.name === 'AbortError') return;
+        self.error = getHttpErrorMessage(e);
       } finally {
         if (self._abortCtrl === ctrl) {
           self.isLoading = false;
@@ -59,13 +63,15 @@ export const MetersStore = types
       self.isDeleting = true;
       if (index >= 0) self.items.splice(index, 1);
 
+      self.deleteError = null;
       try {
         yield httpClient.del(`/meters/${id}/`);
         yield silentRefetch();
-      } catch {
+      } catch (e) {
         if (snapshot !== null && index >= 0) {
           self.items.splice(index, 0, snapshot as never);
         }
+        self.deleteError = getHttpErrorMessage(e);
       } finally {
         self.isDeleting = false;
       }
