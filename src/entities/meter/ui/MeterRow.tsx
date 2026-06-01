@@ -1,17 +1,17 @@
+import { type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
 import styled from 'styled-components';
 import type { IMeter } from '../model/MeterModel';
 import type { IArea } from '../../area';
 import { MeterTypeIcon } from '../../../shared/ui/MeterTypeIcon';
 import { formatDate } from '../../../shared/lib/formatDate';
-import { DeleteButton } from '../../../features/delete-meter';
 
 interface Props {
   meter: IMeter;
   index: number;
   area: IArea | null;
-  onDelete: (id: string) => void;
-  isDeleting: boolean;
+  areaError: boolean;
+  deleteSlot?: ReactNode;
 }
 
 const Row = styled.tr`
@@ -66,6 +66,11 @@ const TdDelete = styled(Td)`
   text-align: right;
 `;
 
+const AddressError = styled.span`
+  color: #b91c1c;
+  font-size: 12px;
+`;
+
 function buildAddress(area: IArea | null): string {
   if (!area) return '—';
   return `${area.house.address}, ${area.str_number_full}`;
@@ -75,8 +80,8 @@ export const MeterRow = observer(function MeterRow({
   meter,
   index,
   area,
-  onDelete,
-  isDeleting,
+  areaError,
+  deleteSlot,
 }: Props) {
   return (
     <Row>
@@ -91,15 +96,15 @@ export const MeterRow = observer(function MeterRow({
       <Td style={{ width: 146 }}>
         {meter.initial_values.join(', ') || '—'}
       </Td>
-      <TdAddress>{buildAddress(area)}</TdAddress>
+      <TdAddress>
+        {!area && areaError ? (
+          <AddressError>Ошибка загрузки адреса</AddressError>
+        ) : (
+          buildAddress(area)
+        )}
+      </TdAddress>
       <TdNote>{meter.description ?? '—'}</TdNote>
-      <TdDelete>
-        <DeleteButton
-          onDelete={() => onDelete(meter.id)}
-          disabled={isDeleting}
-          hidden
-        />
-      </TdDelete>
+      <TdDelete>{deleteSlot}</TdDelete>
     </Row>
   );
 });

@@ -16,6 +16,7 @@ export const MetersStore = types
   })
   .volatile(() => ({
     _abortCtrl: null as AbortController | null,
+    _deleteErrorTimer: null as ReturnType<typeof setTimeout> | null,
   }))
   .views((self) => ({
     get currentPage() {
@@ -72,16 +73,29 @@ export const MetersStore = types
           self.items.splice(index, 0, snapshot as never);
         }
         self.deleteError = getHttpErrorMessage(e);
+        if (self._deleteErrorTimer) clearTimeout(self._deleteErrorTimer);
+        self._deleteErrorTimer = setTimeout(() => {
+          self.deleteError = null;
+        }, 5000);
       } finally {
         self.isDeleting = false;
       }
     });
 
+    const retryFetch = () => {
+      fetchMeters(self.offset);
+    };
+
     const goToPage = (page: number) => {
       fetchMeters((page - 1) * METERS_PER_PAGE);
     };
 
-    return { fetchMeters, deleteMeter, goToPage };
+    function beforeDestroy() {
+      self._abortCtrl?.abort();
+      if (self._deleteErrorTimer) clearTimeout(self._deleteErrorTimer);
+    }
+
+    return { fetchMeters, retryFetch, deleteMeter, goToPage, beforeDestroy };
   });
 
 export type IMetersStore = typeof MetersStore.Type;

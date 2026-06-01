@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite';
 import styled from 'styled-components';
 import { useStore } from '../../../app/providers/useStore';
 import { MeterRow } from '../../../entities/meter/ui/MeterRow';
+import { DeleteButton } from '../../../features/delete-meter';
 import { MetersTableHeader } from './MetersTableHeader';
 import { SkeletonRows } from './SkeletonRows';
 
@@ -29,9 +30,26 @@ const EmptyWrapper = styled.div`
   justify-content: center;
   height: 100%;
   gap: 8px;
-  color: #1D2432;
+  color: #1d2432;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
+`;
+
+const RetryButton = styled.button`
+  margin-top: 4px;
+  padding: 6px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  color: #1f2939;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover {
+    background: #f1f5f9;
+  }
 `;
 
 const ErrorBanner = styled.div`
@@ -65,6 +83,16 @@ export const MetersTable = observer(function MetersTable() {
     });
   }
 
+  function renderDeleteButton(id: string, index: number) {
+    return (
+      <DeleteButton
+        onDelete={() => handleDeleteRequest(id, index)}
+        disabled={meters.isDeleting}
+        hidden
+      />
+    );
+  }
+
   return (
     <ScrollWrapper>
       {meters.deleteError && (
@@ -81,6 +109,9 @@ export const MetersTable = observer(function MetersTable() {
                 <EmptyWrapper>
                   <span style={{ fontSize: 32 }}>⚠️</span>
                   <span>{meters.error}</span>
+                  <RetryButton onClick={() => meters.retryFetch()}>
+                    Повторить
+                  </RetryButton>
                 </EmptyWrapper>
               </td>
             </tr>
@@ -94,16 +125,19 @@ export const MetersTable = observer(function MetersTable() {
               </td>
             </tr>
           ) : (
-            meters.items.map((meter, i) => (
-              <MeterRow
-                key={meter.id}
-                meter={meter}
-                index={meters.offset + i + 1}
-                area={areas.cache.get(meter.area.id) ?? null}
-                onDelete={(id) => handleDeleteRequest(id, meters.offset + i + 1)}
-                isDeleting={meters.isDeleting}
-              />
-            ))
+            meters.items.map((meter, i) => {
+              const globalIndex = meters.offset + i + 1;
+              return (
+                <MeterRow
+                  key={meter.id}
+                  meter={meter}
+                  index={globalIndex}
+                  area={areas.cache.get(meter.area.id) ?? null}
+                  areaError={!!areas.error}
+                  deleteSlot={renderDeleteButton(meter.id, globalIndex)}
+                />
+              );
+            })
           )}
         </tbody>
       </Table>
