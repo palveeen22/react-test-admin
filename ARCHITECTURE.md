@@ -28,7 +28,7 @@ src/
 │   │   └── GlobalStyles.ts           # Глобальный CSS-сброс
 │   ├── ui/
 │   │   └── ModalRoot.tsx             # Observer-обёртка ConfirmModal, монтируется в App
-│   └── App.tsx                       # Корневой компонент, монтирует IconSprite и ModalRoot
+│   └── App.tsx                       # Корневой компонент, оборачивает дерево в ErrorBoundary, монтирует IconSprite и ModalRoot
 │
 ├── pages/                            # Страницы (уровень роутинга)
 │   └── meters-page/
@@ -61,7 +61,7 @@ src/
 │   │   │   ├── MeterModel.ts         # MST-модель счётчика
 │   │   │   └── MetersStore.ts        # Список, fetch/delete, AbortController
 │   │   ├── ui/
-│   │   │   └── MeterRow.tsx          # Строка таблицы с hover-состоянием
+│   │   │   └── MeterRow.tsx          # Строка таблицы; принимает deleteSlot?: ReactNode — FSD-слот для действий из features
 │   │   └── index.ts
 │   └── area/
 │       ├── model/
@@ -89,6 +89,9 @@ src/
         ├── ConfirmModal/
         │   ├── ConfirmModal.tsx      # Portal-модал подтверждения, Esc/Enter
         │   └── index.ts
+        ├── ErrorBoundary/
+        │   ├── ErrorBoundary.tsx     # React class ErrorBoundary — last-resort catch, показывает fallback + кнопку перезагрузки
+        │   └── index.ts
         └── MeterTypeIcon.tsx         # Цветная SVG-иконка + метка типа счётчика
 ```
 
@@ -107,10 +110,13 @@ RootStore
 │   ├── error                null | строка — ошибка загрузки страницы (показывается вместо таблицы)
 │   ├── deleteError          null | строка — ошибка удаления (показывается баннером над таблицей)
 │   ├── volatile _abortCtrl  AbortController — отменяет предыдущий запрос
+│   ├── volatile _deleteErrorTimer  setTimeout handle — auto-dismiss deleteError через 5 с
 │   ├── fetchMeters(offset)  → aborts prev, загружает страницу, вызывает silentRefetch
 │   ├── silentRefetch()      → GET /meters/ без isLoading (используется после удаления)
+│   ├── retryFetch()         → fetchMeters(self.offset) — повтор без смены страницы
 │   ├── deleteMeter(id)      → оптимистичное удаление + DELETE + silentRefetch + rollback
-│   └── goToPage(page)       → вычисляет offset, вызывает fetchMeters
+│   ├── goToPage(page)       → вычисляет offset, вызывает fetchMeters
+│   └── beforeDestroy()      → abort + clearTimeout, предотвращает утечку
 ├── AreasStore
 │   ├── cache                MST map: id → AreaModel (живёт при смене страниц)
 │   ├── error                null | строка — ошибка загрузки районов
@@ -155,13 +161,13 @@ RootStore
 | остальные | Произошла непредвиденная ошибка |
 
 Ошибки хранятся в `error` / `deleteError` MST-полях (не бросаются наружу).
-`MetersTable` читает эти поля и рендерит соответствующий UI.
+`MetersTable` читает эти поля и рендерит соответствующий UI. `deleteError` auto-dismiss через 5 с.
 
 | Состояние | UI |
 |---|---|
-| `meters.error` | Вместо таблицы — иконка + текст ошибки |
+| `meters.error` | Вместо таблицы — иконка + текст ошибки + кнопка "Повторить" |
 | `meters.deleteError` | Красный баннер над таблицей |
-| `areas.error` | Хранится в store, сейчас не отображается в UI |
+| `areas.error` | Передаётся в MeterRow как `areaError` — ячейка адреса показывает "Ошибка загрузки адреса" |
 
 ---
 
@@ -177,7 +183,7 @@ ConfirmModal → «Удалить» → meters.deleteMeter(id)
   4. silentRefetch()                 — тихое обновление без скелетона
   5. isDeleting = false
   При ошибке: items.splice(index, 0, snapshot) — откат
-             deleteError = getHttpErrorMessage(e) — баннер
+             deleteError = getHttpErrorMessage(e) — баннер (auto-dismiss 5 с)
 ```
 
 ---
