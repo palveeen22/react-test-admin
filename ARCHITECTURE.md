@@ -18,13 +18,17 @@ app → pages → widgets → features → entities → shared
 src/
 ├── app/                              # Инициализация приложения
 │   ├── providers/
-│   │   └── StoreProvider.tsx         # React-контекст с MST root store
+│   │   ├── storeContext.ts           # Singleton store + StoreContext (createContext)
+│   │   ├── StoreProvider.tsx         # Провайдер контекста для дерева компонентов
+│   │   └── useStore.ts               # Хук useStore() — доступ к RootStore из любого компонента
 │   ├── store/
 │   │   ├── RootStore.ts              # Корневая MST-модель (meters + areas + modal)
 │   │   └── index.ts
 │   ├── styles/
 │   │   └── GlobalStyles.ts           # Глобальный CSS-сброс
-│   └── App.tsx                       # Корневой компонент, монтирует IconSprite и ConfirmModal
+│   ├── ui/
+│   │   └── ModalRoot.tsx             # Observer-обёртка ConfirmModal, монтируется в App
+│   └── App.tsx                       # Корневой компонент, монтирует IconSprite и ModalRoot
 │
 ├── pages/                            # Страницы (уровень роутинга)
 │   └── meters-page/
@@ -35,8 +39,9 @@ src/
 ├── widgets/                          # Автономные UI-блоки
 │   └── meters-table/
 │       ├── ui/
-│       │   ├── MetersTable.tsx       # Таблица: скелетон / пустое состояние / строки + логика открытия модала
-│       │   └── MetersTableHeader.tsx # Липкий <thead>
+│       │   ├── MetersTable.tsx       # Таблица: скелетон / ошибка / пустое состояние / строки + логика открытия модала
+│       │   ├── MetersTableHeader.tsx # Липкий <thead>
+│       │   └── SkeletonRows.tsx      # Shimmer-скелетон (20 строк с анимацией), рендерится при isLoading
 │       └── index.ts
 │
 ├── features/                         # Пользовательские действия
@@ -67,7 +72,7 @@ src/
 │
 └── shared/                           # Переиспользуемые утилиты и примитивы
     ├── api/
-    │   └── httpClient.ts             # Обёртка над fetch (get + AbortSignal / del)
+    │   └── httpClient.ts             # Обёртка над fetch (get + AbortSignal / del), HttpError, getHttpErrorMessage()
     ├── config/
     │   └── constants.ts              # VITE_API_BASE_URL из env, размер страницы
     ├── lib/
@@ -76,11 +81,14 @@ src/
     │   └── ConfirmModalStore.ts      # Глобальный MST-стор модального окна подтверждения
     └── ui/
         ├── Icon/
-        │   └── Icon.tsx              # <svg><use href="#icon-..."> — лёгкий враппер спрайта
+        │   ├── Icon.tsx              # <svg><use href="#icon-..."> — лёгкий враппер спрайта
+        │   └── index.ts
         ├── IconSprite/
-        │   └── IconSprite.tsx        # Скрытый <svg> с <symbol> для всех иконок
+        │   ├── IconSprite.tsx        # Скрытый <svg> с <symbol> для всех иконок
+        │   └── index.ts
         ├── ConfirmModal/
-        │   └── ConfirmModal.tsx      # Portal-модал подтверждения, Esc/Enter
+        │   ├── ConfirmModal.tsx      # Portal-модал подтверждения, Esc/Enter
+        │   └── index.ts
         └── MeterTypeIcon.tsx         # Цветная SVG-иконка + метка типа счётчика
 ```
 
@@ -96,6 +104,8 @@ RootStore
 │   ├── offset               смещение текущей страницы
 │   ├── isLoading            показывает скелетон при смене страницы
 │   ├── isDeleting           блокирует повторное нажатие кнопки удаления
+│   ├── error                null | строка — ошибка загрузки страницы (показывается вместо таблицы)
+│   ├── deleteError          null | строка — ошибка удаления (показывается баннером над таблицей)
 │   ├── volatile _abortCtrl  AbortController — отменяет предыдущий запрос
 │   ├── fetchMeters(offset)  → aborts prev, загружает страницу, вызывает silentRefetch
 │   ├── silentRefetch()      → GET /meters/ без isLoading (используется после удаления)
@@ -103,6 +113,7 @@ RootStore
 │   └── goToPage(page)       → вычисляет offset, вызывает fetchMeters
 ├── AreasStore
 │   ├── cache                MST map: id → AreaModel (живёт при смене страниц)
+│   ├── error                null | строка — ошибка загрузки районов
 │   ├── volatile pendingIds  Set<string> — защита от параллельных дублирующих запросов
 │   └── fetchAreas(ids[])    → фильтрует кеш + pending, один батчевый GET /areas/
 └── ConfirmModalStore
@@ -125,18 +136,48 @@ RootStore
 
 ---
 
+## Обработка ошибок HTTP
+
+`httpClient` бросает `HttpError` (содержит `status: number`) вместо базового `Error`.
+
+Вспомогательная функция `getHttpErrorMessage(e)` переводит статус в читаемое сообщение:
+
+| Статус | Сообщение |
+|---|---|
+| 400 | Некорректный запрос |
+| 401 | Необходима авторизация |
+| 403 | Доступ запрещён |
+| 404 | Данные не найдены |
+| 500 | Ошибка сервера |
+| 502 | Сервер недоступен |
+| 503 | Сервис временно недоступен |
+| `Failed to fetch` | Нет соединения с сервером |
+| остальные | Произошла непредвиденная ошибка |
+
+Ошибки хранятся в `error` / `deleteError` MST-полях (не бросаются наружу).
+`MetersTable` читает эти поля и рендерит соответствующий UI.
+
+| Состояние | UI |
+|---|---|
+| `meters.error` | Вместо таблицы — иконка + текст ошибки |
+| `meters.deleteError` | Красный баннер над таблицей |
+| `areas.error` | Хранится в store, сейчас не отображается в UI |
+
+---
+
 ## Flow удаления счётчика
 
 ```
 Пользователь hover → DeleteButton виден
 Клик → MetersTable.handleDeleteRequest → modal.open(...)
 ConfirmModal → «Удалить» → meters.deleteMeter(id)
-  1. isDeleting = true
+  1. isDeleting = true, deleteError = null
   2. items.splice(index, 1)          — элемент исчезает мгновенно (оптимистично)
   3. DELETE /meters/:id/
   4. silentRefetch()                 — тихое обновление без скелетона
   5. isDeleting = false
   При ошибке: items.splice(index, 0, snapshot) — откат
+             deleteError = getHttpErrorMessage(e) — баннер
 ```
 
 ---
